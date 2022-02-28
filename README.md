@@ -39,8 +39,8 @@ const executableSchema = addValidationToSchema(
                   @listValidation(maxItems: 2, listDepth: 0)
                   @listValidation(uniqueItems: true, listDepth: 1)
                   @validation(startsWith: "abc")
-                field1: String!
-                field2: String!
+                string1: String!
+                string2: String!
               }
 
               type Mutation {

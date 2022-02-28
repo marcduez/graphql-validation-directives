@@ -21,26 +21,24 @@ export class ListValidationDirective extends BaseValidationDirective {
 
   // eslint-disable-next-line class-methods-use-this
   getListDepth(directiveConfig: Record<string, any>) {
-    return directiveConfig.listDepth as number
+    return (directiveConfig.listDepth ?? 0) as number
   }
 
   // eslint-disable-next-line class-methods-use-this
   validate(directiveConfig: Record<string, any>, value: any) {
     const valueArray = value as any[]
 
-    if (
-      directiveConfig.maxItems !== undefined &&
-      valueArray.length > directiveConfig.maxItems
-    ) {
-      throw new Error(`Value must be at most ${directiveConfig.maxItems} items`)
+    const { maxItems, minItems } = directiveConfig as {
+      maxItems?: number
+      minItems?: number
     }
-    if (
-      directiveConfig.minItems !== undefined &&
-      valueArray.length < directiveConfig.minItems
-    ) {
-      throw new Error(
-        `Value must be at least ${directiveConfig.minItems} items`
-      )
+
+    if (maxItems !== undefined && valueArray.length > maxItems) {
+      throw new Error(`Value must be at most ${maxItems} items`)
+    }
+
+    if (minItems !== undefined && valueArray.length < minItems) {
+      throw new Error(`Value must be at least ${minItems} items`)
     }
 
     // TODO: Other constraints

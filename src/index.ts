@@ -9,6 +9,7 @@ import {
   GraphQLSchema,
   GraphQLType,
 } from "graphql"
+import AggregateValidationError from "./aggregate-validation-error"
 import { ValidateFn, ValidationTarget } from "./types"
 import ValidationError from "./validation-error"
 
@@ -85,7 +86,7 @@ const validateRecursive = <TSource, TContext>(
     fn: ValidateFn
   }[] = [],
   listDepth = 0
-): Error[] => {
+): ValidationError[] => {
   if (value === null || value === undefined) {
     return []
   }
@@ -107,12 +108,12 @@ const validateRecursive = <TSource, TContext>(
         validation =>
           validation.target === "list" && validation.listDepth === listDepth
       )
-      .reduce<Error[]>((errors, { fn }) => {
+      .reduce<ValidationError[]>((errors, { fn }) => {
         try {
           fn(value, listType, path, source, args, context, info)
           return errors
         } catch (e: unknown) {
-          return [...errors, e as Error]
+          return [...errors, new ValidationError(e as Error, path)]
         }
       }, [])
     if (listErrors.length) {
@@ -120,7 +121,7 @@ const validateRecursive = <TSource, TContext>(
     }
 
     // Validate each list item.
-    return (value as any[]).reduce<Error[]>(
+    return (value as any[]).reduce<ValidationError[]>(
       (errors, item, index) => [
         ...errors,
         ...validateRecursive(
@@ -154,12 +155,12 @@ const validateRecursive = <TSource, TContext>(
         }[]
       )
       .filter(validation => validation.target === "object")
-      .reduce<Error[]>((errors, { fn }) => {
+      .reduce<ValidationError[]>((errors, { fn }) => {
         try {
           fn(value, inputObjectType, path, source, args, context, info)
           return errors
         } catch (e: unknown) {
-          return [...errors, e as Error]
+          return [...errors, new ValidationError(e as Error, path)]
         }
       }, [])
     if (objectErrors.length) {
@@ -167,7 +168,9 @@ const validateRecursive = <TSource, TContext>(
     }
 
     if (inputObjectType.extensions.validate === true) {
-      return Object.values(inputObjectType.getFields()).reduce<Error[]>(
+      return Object.values(inputObjectType.getFields()).reduce<
+        ValidationError[]
+      >(
         (errors, field) => [
           ...errors,
           ...validateRecursive(
@@ -195,12 +198,12 @@ const validateRecursive = <TSource, TContext>(
   // Otherwise, object is a scalar. Run scalar validation functions on it.
   return validations
     .filter(validation => validation.target === "scalar")
-    .reduce<Error[]>((arr, { fn }) => {
+    .reduce<ValidationError[]>((arr, { fn }) => {
       try {
         fn(value, valueType, path, source, args, context, info)
         return arr
       } catch (e: unknown) {
-        return [...arr, e as Error]
+        return [...arr, new ValidationError(e as Error, path)]
       }
     }, [])
 }
@@ -212,7 +215,7 @@ const validateFieldArguments = <TSource, TContext>(
   context: TContext,
   info: GraphQLResolveInfo
 ) => {
-  const errors = Object.entries(args).reduce<Error[]>(
+  const errors = Object.entries(args).reduce<ValidationError[]>(
     (errs, [argumentName, argumentValue]) => {
       const argument = field.args.find(arg => arg.name === argumentName)!
       const argumentValidations = ((field.extensions
@@ -239,7 +242,7 @@ const validateFieldArguments = <TSource, TContext>(
   )
 
   if (errors.length) {
-    throw new ValidationError(errors)
+    throw new AggregateValidationError(errors)
   }
 }
 
