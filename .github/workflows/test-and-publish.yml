@@ -1,0 +1,38 @@
+name: Test And Publish
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types:
+      - published
+
+jobs:
+  test-and-publish:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "14.x"
+          cache: "yarn"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@marcduez"
+
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn lint
+
+      - run: yarn test --ci
+
+      - run: yarn build
+
+      - run: cp {package.json,README.md} dist
+
+      - run: yarn publish dist --new-version "${GITHUB_REF#refs/tags/}" --no-git-tag-version --verbose
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
