@@ -1,3 +1,4 @@
+/* eslint-disable class-methods-use-this */
 import { DocumentNode } from "graphql"
 import gql from "graphql-tag"
 import { BaseValidationDirective } from "./base-validation-directive"
@@ -7,7 +8,6 @@ export class ListValidationDirective extends BaseValidationDirective {
     super("listValidation", "list")
   }
 
-  // eslint-disable-next-line class-methods-use-this
   get typeDefs(): DocumentNode {
     return gql`
       directive @listValidation(
@@ -19,18 +19,17 @@ export class ListValidationDirective extends BaseValidationDirective {
     `
   }
 
-  // eslint-disable-next-line class-methods-use-this
   getListDepth(directiveConfig: Record<string, any>) {
     return (directiveConfig.listDepth ?? 0) as number
   }
 
-  // eslint-disable-next-line class-methods-use-this
   validate(directiveConfig: Record<string, any>, value: any) {
     const valueArray = value as any[]
 
-    const { maxItems, minItems } = directiveConfig as {
+    const { maxItems, minItems, uniqueItems } = directiveConfig as {
       maxItems?: number
       minItems?: number
+      uniqueItems?: boolean
     }
 
     if (maxItems !== undefined && valueArray.length > maxItems) {
@@ -41,6 +40,14 @@ export class ListValidationDirective extends BaseValidationDirective {
       throw new Error(`Value must be at least ${minItems} items`)
     }
 
-    // TODO: Other constraints
+    if (
+      uniqueItems === true &&
+      valueArray
+        .map(item => JSON.stringify(item))
+        .filter((item, index, arr) => arr.indexOf(item) === index).length !==
+        valueArray.length
+    ) {
+      throw new Error("Value must contain unique items")
+    }
   }
 }

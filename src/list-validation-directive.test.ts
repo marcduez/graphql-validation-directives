@@ -126,8 +126,56 @@ describe("ListValidationDirective", () => {
   })
 
   describe("uniqueItems", () => {
-    it.todo("returns expected errors for invalid args")
+    const schema = getSchema(
+      gql`
+        type Query {
+          testQuery(
+            arg: [String!]! @listValidation(uniqueItems: true)
+          ): Boolean!
+        }
+      `,
+      {
+        Query: {
+          testQuery: () => true,
+        },
+      }
+    )
 
-    it.todo("returns resolver return value for valid args")
+    it("returns expected errors for invalid args", async () => {
+      const result = await graphql({
+        schema,
+        source: print(gql`
+          query {
+            testQuery(arg: ["a", "a", "b", "c"])
+          }
+        `),
+      })
+
+      expect(result.data).toBeNull()
+      expect(result.errors).toEqual([new GraphQLError(ERROR_MESSAGE, {})])
+      expect((result.errors![0] as GraphQLError).extensions).toEqual({
+        code: ERROR_CODE,
+        validationErrors: [
+          {
+            message: "Value must contain unique items",
+            path: "arg",
+          },
+        ],
+      })
+    })
+
+    it("returns resolver return value for valid args", async () => {
+      const result = await graphql({
+        schema,
+        source: print(gql`
+          query {
+            testQuery(arg: ["a", "b", "c"])
+          }
+        `),
+      })
+
+      expect(result.data).toEqual({ testQuery: true })
+      expect(result.errors).toBeUndefined()
+    })
   })
 })

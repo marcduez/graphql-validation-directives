@@ -49,18 +49,24 @@ const getFieldsWithArgumentsAndInputObjectTypes = (schema: GraphQLSchema) => {
 }
 
 function markValidateInputObjectRecursive(
-  inputObjectType: GraphQLInputObjectType
+  inputObjectType: GraphQLInputObjectType,
+  visitedTypes: GraphQLInputObjectType[] = []
 ) {
-  const validate = Object.values(inputObjectType.getFields()).some(field => {
+  visitedTypes.push(inputObjectType)
+  let validate = Object.values(inputObjectType.getFields()).some(field => {
     const fieldType = unwrapType(field.type)
-    if (fieldType === inputObjectType) {
-      return false
-    }
     if (fieldType instanceof GraphQLInputObjectType) {
-      return markValidateInputObjectRecursive(fieldType)
+      return visitedTypes.includes(fieldType)
+        ? false
+        : markValidateInputObjectRecursive(fieldType, [
+            ...visitedTypes,
+            fieldType,
+          ])
     }
     return !!field.extensions.validations
   })
+
+  validate = validate || !!inputObjectType.extensions.validations
 
   if (validate) {
     Object.defineProperty(inputObjectType.extensions, "validate", {

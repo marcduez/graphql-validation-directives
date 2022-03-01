@@ -1,3 +1,4 @@
+/* eslint-disable class-methods-use-this */
 import {
   DocumentNode,
   GraphQLNonNull,
@@ -12,11 +13,11 @@ export class ValidationDirective extends BaseValidationDirective {
     super("validation")
   }
 
-  // eslint-disable-next-line class-methods-use-this
   get typeDefs(): DocumentNode {
     return gql`
       enum StringValidationFormat {
         EMAIL
+        UUID
       }
 
       directive @validation(
@@ -30,8 +31,8 @@ export class ValidationDirective extends BaseValidationDirective {
         endsWith: String
         includes: String
         regex: String
+        regexFlags: String
         stringOneOf: [String]
-        stringEquals: String
 
         """
         Number validation rules
@@ -42,12 +43,10 @@ export class ValidationDirective extends BaseValidationDirective {
         exclusiveMax: Float
         exclusiveMin: Float
         numberOneOf: [Float]
-        numberEquals: Float
       ) on INPUT_FIELD_DEFINITION | ARGUMENT_DEFINITION
     `
   }
 
-  // eslint-disable-next-line class-methods-use-this
   validate(
     directiveConfig: Record<string, any>,
     value: any,
@@ -59,27 +58,37 @@ export class ValidationDirective extends BaseValidationDirective {
     }
 
     const {
+      format,
       maxLength,
       minLength,
       startsWith,
       endsWith,
       includes,
+      regex,
+      regexFlags,
       stringOneOf,
-      stringEquals,
+      multipleOf,
       max,
       min,
+      exclusiveMax,
+      exclusiveMin,
+      numberOneOf,
     } = directiveConfig as {
+      format?: "EMAIL" | "UUID"
       maxLength?: number
       minLength?: number
       startsWith?: string
       endsWith?: string
       includes?: string
       regex?: string
+      regexFlags?: string
       stringOneOf?: string[]
-      stringEquals?: string
       multipleOf?: number
-      min?: number
       max?: number
+      min?: number
+      exclusiveMax?: number
+      exclusiveMin?: number
+      numberOneOf?: number[]
     }
 
     if (
@@ -87,6 +96,22 @@ export class ValidationDirective extends BaseValidationDirective {
       ["String", "ID"].includes(innerType.name)
     ) {
       const valueString = value as string
+
+      if (
+        format === "EMAIL" &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valueString)
+      ) {
+        throw new Error(`Value must be be a valid email`)
+      }
+
+      if (
+        format === "UUID" &&
+        !/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+          valueString
+        )
+      ) {
+        throw new Error(`Value must be be a valid UUID`)
+      }
 
       if (maxLength !== undefined && valueString.length > maxLength) {
         throw new Error(`Value must be at most ${maxLength} characters`)
@@ -114,36 +139,100 @@ export class ValidationDirective extends BaseValidationDirective {
         throw new Error(`Value must include '${includes}'`)
       }
 
-      // TODO: Regex constraint
+      if (
+        regex !== undefined &&
+        !new RegExp(regex, regexFlags).test(valueString)
+      ) {
+        throw new Error(
+          `Value must match pattern '${regex}'${
+            regexFlags !== undefined ? ` with flags '${regexFlags}'` : ""
+          }`
+        )
+      }
 
       if (stringOneOf !== undefined && !stringOneOf.includes(valueString)) {
         throw new Error(
           `Value must be one of ${stringOneOf.map(s => `'${s}'`).join(", ")}`
         )
       }
-
-      if (stringEquals !== undefined && valueString !== stringEquals) {
-        throw new Error(`Value must equal '${stringEquals}'`)
-      }
-
-      // TODO: Other constraints
     }
 
-    if (
-      innerType instanceof GraphQLScalarType &&
-      ["Int", "Float"].includes(innerType.name)
-    ) {
+    if (innerType instanceof GraphQLScalarType && innerType.name === "Int") {
       const valueNumber = value as number
+
+      if (
+        multipleOf !== undefined &&
+        valueNumber % Math.round(multipleOf) !== 0
+      ) {
+        throw new Error(`Value must be a multiple of ${Math.round(multipleOf)}`)
+      }
+
+      if (max !== undefined && valueNumber > Math.round(max)) {
+        throw new Error(`Value must not be greater than ${Math.round(max)}`)
+      }
+
+      if (min !== undefined && valueNumber < Math.round(min)) {
+        throw new Error(`Value must not be less than ${Math.round(min)}`)
+      }
+
+      if (
+        exclusiveMax !== undefined &&
+        valueNumber >= Math.round(exclusiveMax)
+      ) {
+        throw new Error(`Value must be less than ${Math.round(exclusiveMax)}`)
+      }
+
+      if (
+        exclusiveMin !== undefined &&
+        valueNumber <= Math.round(exclusiveMin)
+      ) {
+        throw new Error(
+          `Value must be greater than ${Math.round(exclusiveMin)}`
+        )
+      }
+
+      if (
+        numberOneOf !== undefined &&
+        !numberOneOf.map(num => Math.round(num)).includes(valueNumber)
+      ) {
+        throw new Error(
+          `Value must be one of ${numberOneOf
+            .map(n => Math.round(n).toString())
+            .join(", ")}`
+        )
+      }
+    }
+
+    if (innerType instanceof GraphQLScalarType && innerType.name === "Float") {
+      const valueNumber = value as number
+
+      if (multipleOf !== undefined && valueNumber % multipleOf !== 0) {
+        throw new Error(`Value must be a multiple of ${multipleOf}`)
+      }
 
       if (max !== undefined && valueNumber > max) {
         throw new Error(`Value must not be greater than ${max}`)
       }
 
       if (min !== undefined && valueNumber < min) {
-        throw new Error(`Value must be less than ${min}`)
+        throw new Error(`Value must not be less than ${min}`)
       }
 
-      // TODO: Other constraints
+      if (exclusiveMax !== undefined && valueNumber >= exclusiveMax) {
+        throw new Error(`Value must be less than ${exclusiveMax}`)
+      }
+
+      if (exclusiveMin !== undefined && valueNumber <= exclusiveMin) {
+        throw new Error(`Value must be greater than ${exclusiveMin}`)
+      }
+
+      if (numberOneOf !== undefined && !numberOneOf.includes(valueNumber)) {
+        throw new Error(
+          `Value must be one of ${numberOneOf
+            .map(n => n.toString())
+            .join(", ")}`
+        )
+      }
     }
   }
 }

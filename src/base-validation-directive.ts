@@ -1,3 +1,4 @@
+/* eslint-disable class-methods-use-this */
 import { getDirective, MapperKind, mapSchema } from "@graphql-tools/utils"
 import {
   DocumentNode,
@@ -154,7 +155,6 @@ export class BaseValidationDirective {
     })
   }
 
-  // eslint-disable-next-line class-methods-use-this
   get typeDefs(): DocumentNode {
     throw new Error("Implemented by sub-class")
   }
@@ -163,7 +163,7 @@ export class BaseValidationDirective {
    * Returns the depth of list validated by this directive, possibly using its attributes as input.
    * @param directiveConfig - The configuration of this directive
    */
-  // eslint-disable-next-line class-methods-use-this, @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getListDepth(directiveConfig: Record<string, any>): number {
     return 0
   }
@@ -179,7 +179,6 @@ export class BaseValidationDirective {
    * @param context - The context argument of the resolver - the current GraphQL execution context.
    * @param info - The info argument of the resolver - the current GraphQL resolve info.
    */
-  // eslint-disable-next-line class-methods-use-this,
   validate(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     directiveConfig: Record<string, any>,

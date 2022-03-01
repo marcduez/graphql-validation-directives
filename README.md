@@ -6,7 +6,7 @@ Schema for adding input validation to GraphQL services, using schema directives.
 2. Marks any input objects that have nested fields with validation extensions as needing validation.
 3. Wraps the resolver functions of all fields with validated arguments in a function that first tries to run validation on all arguments.
 
-If any validation function throws, the contents are returned as validation errors, and the original resolver is not run.
+If any validation function throws, the contents are returned as validation errors, and the wrapped resolver is not run.
 
 ## General usage
 
@@ -29,9 +29,9 @@ const executableSchema = addValidationToSchema(
       validationDirective.applyDirectiveToSchema(
         makeExecutableSchema({
           typeDefs: [
-            validationDirective.typeDefs,
-            objectValidationDirective.typeDefs,
             listValidationDirective.typeDefs,
+            objectValidationDirective.typeDefs,
+            validationDirective.typeDefs,
             gql`
               input Mutation1Input
                 @objectValidation(equalFields: ["string1", "string2"]) {
@@ -45,7 +45,9 @@ const executableSchema = addValidationToSchema(
 
               type Mutation {
                 mutation1(input: Mutation1Input!): Boolean!
-                mutation2(input: String! @validation(maxLength: 255)): Boolean!
+                mutation2(
+                  input: String! @validation(maxLength: 255, startsWith: "xyz")
+                ): Boolean!
               }
             `,
           ],
@@ -73,96 +75,420 @@ Null and undefined values are not validated. Use conventional GraphQL type hints
 
 **format**
 
-`TODO`
+Validates that a string matches a format. Currently allowed values are `EMAIL` and `UUID`.
+
+```gql
+input Mutation1Input {
+  field: String! @validation(format: EMAIL)
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: String! @validation(format: EMAIL)): Boolean!
+}
+```
 
 **maxLength**
 
-`TODO`
+The maximum allowed length of a string, inclusive.
+
+```gql
+input Mutation1Input {
+  field: String! @validation(maxLength: 255)
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: String! @validation(maxLength: 255)): Boolean!
+}
+```
 
 **minLength**
 
-`TODO`
+The minimum allowed length of a string, inclusive.
+
+```gql
+input Mutation1Input {
+  field: String! @validation(minLength: 8)
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: String! @validation(minLength: 8)): Boolean!
+}
+```
 
 **startsWith**
 
-`TODO`
+A string that must match the start of the provided value.
+
+```gql
+input Mutation1Input {
+  field: String! @validation(startsWith: "account-")
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: String! @validation(startsWith: "account-")): Boolean!
+}
+```
 
 **endsWith**
 
-`TODO`
+A string that must match the end of the provided value.
+
+```gql
+input Mutation1Input {
+  field: String! @validation(startsWith: "-cad")
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: String! @validation(startsWith: "-cad")): Boolean!
+}
+```
 
 **includes**
 
-`TODO`
+A string that must appear somewhere in the provided value.
 
-**regex**
+```gql
+input Mutation1Input {
+  field: String! @validation(contains: "-rrsp-")
+}
 
-`TODO`
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: String! @validation(contains: "-rrsp-")): Boolean!
+}
+```
+
+**regex and regexFlags**
+
+A regular expression (and optionally flags) that must match the provided value.
+
+```gql
+input Mutation1Input {
+  field: String! @validation(regex: "^[a-z0-9]$", regexFlags: "i")
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: String! @validation(regex: "^[a-z0-9]$", regexFlags: "i")): Boolean!
+}
+```
 
 **stringOneOf**
 
-`TODO`
+A collection of strings that the provided value must be one of.
 
-**stringEquals**
+```gql
+input Mutation1Input {
+  field: String! @validation(stringOneOf: ["tfsa", "rrsp", "individual"])
+}
 
-`TODO`
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: String! @validation(stringOneOf: ["tfsa", "rrsp", "individual"])): Boolean!
+}
+```
 
 **multipleOf**
 
-`TODO`
+A number that must go into the provided value without remainder. Rounded to the nearest integer when value is an integer.
+
+```gql
+input Mutation1Input {
+  field: Int! @validation(multipleOf: 2)
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: Float! @validation(multipleOf: 2.2)): Boolean!
+}
+```
 
 **max**
 
-`TODO`
+A number that the provided value must be less than or equal to. Rounded to the nearest integer when value is an integer.
+
+```gql
+input Mutation1Input {
+  field: Int! @validation(max: 2)
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: Float! @validation(max: 2.2)): Boolean!
+}
+```
 
 **min**
 
-`TODO`
+A number that the provided value must be greater than or equal to. Rounded to the nearest integer when value is an integer.
+
+```gql
+input Mutation1Input {
+  field: Int! @validation(min: 2)
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: Float! @validation(min: 2.2)): Boolean!
+}
+```
 
 **exclusiveMax**
 
-`TODO`
+A number that the provided value must be less than. Rounded to the nearest integer when value is an integer.
+
+```gql
+input Mutation1Input {
+  field: Int! @validation(exclusiveMax: 2)
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: Float! @validation(exclusiveMax: 2.2)): Boolean!
+}
+```
 
 **exclusiveMin**
 
-`TODO`
+A number that the provided value must be greater than. Rounded to the nearest integer when value is an integer.
+
+```gql
+input Mutation1Input {
+  field: Int! @validation(exclusiveMin: 2)
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: Float! @validation(exclusiveMin: 2.2)): Boolean!
+}
+```
 
 **numberOneOf**
 
-`TODO`
+A collection of numbers that the provided value must be one of. Items are rounded to the nearest integer when value is an integer.
 
-**numberEquals**
+```gql
+input Mutation1Input {
+  field: Int! @validation(numberOneOf: [2, 3, 4])
+}
 
-`TODO`
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: Float! @validation(numberOneOf: [2.1, 2.2, 2.3])): Boolean!
+}
+```
 
 ### List validation directive
 
 **maxItems**
 
-`TODO`
+The maximum allowed number of items in a list.
+
+```gql
+input Mutation1Input {
+  field: [String!]! @listValidation(maxItems: 5)
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: [String!]! @listValidation(maxItems: 5)): Boolean!
+}
+```
 
 **minItems**
 
-`TODO`
+The minimum allowed number of items in a list.
+
+```gql
+input Mutation1Input {
+  field: [String!]! @listValidation(minItems: 2)
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: [String!]! @listValidation(minItems: 2)): Boolean!
+}
+```
 
 **uniqueItems**
 
-`TODO`
+Whether all items in a list must be unique.
+
+```gql
+input Mutation1Input {
+  field: [String!]! @listValidation(uniqueItems: true)
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: [String!]! @listValidation(uniqueItems: true)): Boolean!
+}
+```
 
 **listDepth**
 
-`TODO`
+Used to identify the depth at which a list validator applies. The top list is depth 0 (the default if not specified), the first nested list is depth 1, the second nested list is depth 2, and so on.
+
+```gql
+input Mutation1Input {
+  field: [[String!]!]! @listValidation(maxItems: 3) @listValidation(maxItems: 2, listDepth: 1)
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+type Mutation {
+  someMutation(arg: [[String!]!]! @listValidation(maxItems: 3) @listValidation(maxItems: 2, listDepth: 1)): Boolean!
+}
+```
 
 ### Object validation directive
 
 **equalFields**
 
-`TODO`
+A collection of field names that must have equal values.
+
+```gql
+input Mutation1Input @objectValidation(equalFields: ["password", "confirmPassword"]) {
+  password: String!
+  confirmPassword: String!
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+input Mutation1Input {
+  password: String!
+  confirmPassword: String!
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input! @objectValidation(equalFields: ["password", "confirmPassword"])): Boolean!
+}
+```
 
 **nonEqualFields**
 
-`TODO`
+A collection of field names that must have distinct values.
+
+```gql
+input Mutation1Input @objectValidation(equalFields: ["securityAnswer1", "securityAnswer2"]) {
+  securityAnswer1: String!
+  securityAnswer2: String!
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input!): Boolean!
+}
+
+OR
+
+input Mutation1Input {
+  securityAnswer1: String!
+  securityAnswer2: String!
+}
+
+type Mutation {
+  someMutation(arg: Mutation1Input! @objectValidation(equalFields: ["securityAnswer1", "securityAnswer2"])): Boolean!
+}
+```
 
 ## Writing custom directives
 
-`TODO`
+TODO

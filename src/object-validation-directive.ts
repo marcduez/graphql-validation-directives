@@ -1,3 +1,4 @@
+/* eslint-disable class-methods-use-this */
 import { DocumentNode } from "graphql"
 import { gql } from "graphql-tag"
 import { BaseValidationDirective } from "./base-validation-directive"
@@ -7,7 +8,6 @@ export class ObjectValidationDirective extends BaseValidationDirective {
     super("objectValidation", "object")
   }
 
-  // eslint-disable-next-line class-methods-use-this
   get typeDefs(): DocumentNode {
     return gql`
       directive @objectValidation(
@@ -17,14 +17,17 @@ export class ObjectValidationDirective extends BaseValidationDirective {
     `
   }
 
-  // eslint-disable-next-line class-methods-use-this
   validate(directiveConfig: Record<string, any>, value: any) {
     const valueObj = value as Record<string, any>
 
     if (directiveConfig.equalFields?.length > 1) {
-      const fieldValues = (directiveConfig.equalFields as string[]).map(
-        fieldName => valueObj[fieldName]?.toString()
-      )
+      const fieldValues = (directiveConfig.equalFields as string[])
+        .map(fieldName => valueObj[fieldName])
+        .map(fieldValue =>
+          fieldValue !== null && fieldValue !== undefined
+            ? JSON.stringify(fieldValue)
+            : fieldValue
+        )
       if (
         fieldValues.some(
           (fieldValue, _, arr) =>
@@ -35,6 +38,27 @@ export class ObjectValidationDirective extends BaseValidationDirective {
       ) {
         throw new Error(
           `Fields ${directiveConfig.equalFields.join(" and ")} must be equal`
+        )
+      }
+    }
+
+    if (directiveConfig.nonEqualFields?.length > 1) {
+      const fieldValues = (directiveConfig.nonEqualFields as string[])
+        .map(fieldName => valueObj[fieldName])
+        .map(fieldValue =>
+          fieldValue !== null && fieldValue !== undefined
+            ? JSON.stringify(fieldValue)
+            : fieldValue
+        )
+
+      if (
+        fieldValues.filter((item, index, arr) => arr.indexOf(item) === index)
+          .length !== fieldValues.length
+      ) {
+        throw new Error(
+          `Fields ${directiveConfig.nonEqualFields.join(
+            " and "
+          )} must not be equal`
         )
       }
     }
