@@ -196,7 +196,7 @@ export class BaseValidationDirective {
     context: any,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     info: GraphQLResolveInfo
-  ) {
+  ): void {
     throw new Error("Implemented by sub-class")
   }
 }
