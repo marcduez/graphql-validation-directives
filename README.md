@@ -1,12 +1,9 @@
 # graphql-validation-directives
 
-Schema for adding input validation to GraphQL services, using schema directives. Under the hood, this library:
+Library for adding input validation to GraphQL services, using schema directives. Under the hood, this library:
 
 1. Uses the schema visitor logic to copy directive metadata into the extension methods of input objects, input object fields, and field arguments.
-2. Marks any input objects that have nested fields with validation extensions as needing validation.
-3. Wraps the resolver functions of all fields with validated arguments in a function that first tries to run validation on all arguments.
-
-If any validation function throws, the contents are returned as validation errors, and the wrapped resolver is not run.
+2. Wraps the resolver functions of all fields with validated arguments, validating all arguments before calling the original resolver. If validation fails, a validation error is returned and the original resolver is never executed.
 
 ## General usage
 
@@ -66,17 +63,17 @@ const executableSchema = addValidationToSchema(
 )
 ```
 
-### List Depth
-
-GraphQL allows us to define lists-of-lists. In order to validate the right level of nesting, validators with list target can implement a `getListDepth()` method. Other validation targets ignore the list depth value. The value is evaluated so that 0 is the top-most list, 1 is the list at 1 level of nesting, 2 is the list at 2 levels of nesting, and so on.
-
 ### Null values
 
-Null and undefined values are not validated. Use conventional GraphQL type hints (e.g. the exclamation point) to enforce nullability.
+Null and undefined values are not validated. Use non-null GraphQL type hints for null checks.
+
+### List Depth
+
+The GraphQL type system allows us to define list of lists. To target our validation at the right level of nesting, we need a way to specify the level of nesting. See [documentation of BaseValidationDirective#getListDepth method](https://github.com/marcduez/graphql-validation-directives/blob/main/src/base-validation-directive.ts#L176) for more details.
 
 ### Custom directive names
 
-If the default names of the directives collide with something in your own schema, they can be instantiated with a custom name.
+If the default names of the validation directives collide with something in your own type definitions, you can use them with a custom name.
 
 ```ts
 import { makeExecutableSchema } from "@graphql-tools/schema"
@@ -119,7 +116,7 @@ const executableSchema = addValidationToSchema(
 
 **format**
 
-Validates that a string matches a format. Currently allowed values are `EMAIL` and `UUID`.
+Throws if a string does not match the provided foramt. Currently allowed values are `EMAIL` and `UUID`.
 
 ```gql
 input Mutation1Input {
@@ -139,7 +136,7 @@ type Mutation {
 
 **maxLength**
 
-The maximum allowed length of a string, inclusive.
+Throws if the string is longer than the provided value.
 
 ```gql
 input Mutation1Input {
@@ -159,7 +156,7 @@ type Mutation {
 
 **minLength**
 
-The minimum allowed length of a string, inclusive.
+Throws if the string is shorter than the provided value.
 
 ```gql
 input Mutation1Input {
@@ -179,7 +176,7 @@ type Mutation {
 
 **startsWith**
 
-A string that must match the start of the provided value.
+Throws if the string does not start with the provided value.
 
 ```gql
 input Mutation1Input {
@@ -199,7 +196,7 @@ type Mutation {
 
 **endsWith**
 
-A string that must match the end of the provided value.
+Throws if the string does not end with the provided value.
 
 ```gql
 input Mutation1Input {
@@ -219,7 +216,7 @@ type Mutation {
 
 **includes**
 
-A string that must appear somewhere in the provided value.
+Throws if the string does not include the provided value.
 
 ```gql
 input Mutation1Input {
@@ -239,7 +236,7 @@ type Mutation {
 
 **regex and regexFlags**
 
-A regular expression (and optionally flags) that must match the provided value.
+Throws if the string does not match the provided regular expression pattern. If flags are provided, they are used.
 
 ```gql
 input Mutation1Input {
@@ -259,11 +256,11 @@ type Mutation {
 
 **oneOf**
 
-A collection of strings that the provided value must be one of.
+Throws if the string is not in the provided collection of strings.
 
 ```gql
 input Mutation1Input {
-  field: String! @validString(stringOneOf: ["tfsa", "rrsp", "individual"])
+  field: String! @validString(oneOf: ["tfsa", "rrsp", "individual"])
 }
 
 type Mutation {
@@ -273,7 +270,7 @@ type Mutation {
 OR
 
 type Mutation {
-  someMutation(arg: String! @validString(stringOneOf: ["tfsa", "rrsp", "individual"])): Boolean!
+  someMutation(arg: String! @validString(oneOf: ["tfsa", "rrsp", "individual"])): Boolean!
 }
 ```
 
@@ -281,7 +278,7 @@ type Mutation {
 
 **multipleOf**
 
-A number that must go into the provided value without remainder.
+Throws if the number is not multiple of the provided integer value.
 
 ```gql
 input Mutation1Input {
@@ -301,7 +298,7 @@ type Mutation {
 
 **max**
 
-A number that the provided value must be less than or equal to.
+Throws if the number is greater than the provided integer value.
 
 ```gql
 input Mutation1Input {
@@ -321,7 +318,7 @@ type Mutation {
 
 **min**
 
-A number that the provided value must be greater than or equal to.
+Throws if the number is less than the provided integer value.
 
 ```gql
 input Mutation1Input {
@@ -341,7 +338,7 @@ type Mutation {
 
 **exclusiveMax**
 
-A number that the provided value must be less than.
+Throws if the number is greater than or equal to the provided integer value.
 
 ```gql
 input Mutation1Input {
@@ -361,7 +358,7 @@ type Mutation {
 
 **exclusiveMin**
 
-A number that the provided value must be greater than.
+Throws if the number is less than or equal to the provided integer value.
 
 ```gql
 input Mutation1Input {
@@ -381,11 +378,11 @@ type Mutation {
 
 **oneOf**
 
-A collection of numbers that the provided value must be one of.
+Throws if the number is not in the provided collection of integers.
 
 ```gql
 input Mutation1Input {
-  field: Int! @validInt(numberOneOf: [2, 3, 4])
+  field: Int! @validInt(oneOf: [2, 3, 4])
 }
 
 type Mutation {
@@ -395,7 +392,7 @@ type Mutation {
 OR
 
 type Mutation {
-  someMutation(arg: Int! @validInt(numberOneOf: [2, 3, 4])): Boolean!
+  someMutation(arg: Int! @validInt(oneOf: [2, 3, 4])): Boolean!
 }
 ```
 
@@ -403,7 +400,7 @@ type Mutation {
 
 **multipleOf**
 
-A number that must go into the provided value without remainder.
+Throws if the number is not multiple of the provided float value.
 
 ```gql
 input Mutation1Input {
@@ -423,7 +420,7 @@ type Mutation {
 
 **max**
 
-A number that the provided value must be less than or equal to.
+Throws if the number is greater than the provided float value.
 
 ```gql
 input Mutation1Input {
@@ -443,7 +440,7 @@ type Mutation {
 
 **min**
 
-A number that the provided value must be greater than or equal to.
+Throws if the number is less than the provided float value.
 
 ```gql
 input Mutation1Input {
@@ -463,7 +460,7 @@ type Mutation {
 
 **exclusiveMax**
 
-A number that the provided value must be less than.
+Throws if the number is greater than or equal to the provided float value.
 
 ```gql
 input Mutation1Input {
@@ -483,7 +480,7 @@ type Mutation {
 
 **exclusiveMin**
 
-A number that the provided value must be greater than.
+Throws if the number is less than or equal to the provided float value.
 
 ```gql
 input Mutation1Input {
@@ -503,11 +500,11 @@ type Mutation {
 
 **oneOf**
 
-A collection of numbers that the provided value must be one of.
+Throws if the number is not in the provided collection of floats.
 
 ```gql
 input Mutation1Input {
-  field: Float! @validFloat(numberOneOf: [2.1, 2.2, 2.3])
+  field: Float! @validFloat(oneOf: [2.1, 2.2, 2.3])
 }
 
 type Mutation {
@@ -517,7 +514,7 @@ type Mutation {
 OR
 
 type Mutation {
-  someMutation(arg: Float! @validFloat(numberOneOf: [2.1, 2.2, 2.3])): Boolean!
+  someMutation(arg: Float! @validFloat(oneOf: [2.1, 2.2, 2.3])): Boolean!
 }
 ```
 
@@ -525,7 +522,7 @@ type Mutation {
 
 **maxItems**
 
-The maximum allowed number of items in a list.
+Throws if the list has more than the provided number of items.
 
 ```gql
 input Mutation1Input {
@@ -545,7 +542,7 @@ type Mutation {
 
 **minItems**
 
-The minimum allowed number of items in a list.
+Throws if the list has less than the provided number of items.
 
 ```gql
 input Mutation1Input {
@@ -565,7 +562,7 @@ type Mutation {
 
 **uniqueItems**
 
-Whether all items in a list must be unique.
+Throws if the list has non-unique items.
 
 ```gql
 input Mutation1Input {
@@ -585,7 +582,7 @@ type Mutation {
 
 **listDepth**
 
-Used to identify the depth at which a list validator applies. The top list is depth 0 (the default if not specified), the first nested list is depth 1, the second nested list is depth 2, and so on.
+See [documentation of BaseValidationDirective#getListDepth method](https://github.com/marcduez/graphql-validation-directives/blob/main/src/base-validation-directive.ts#L176) for more details on this feature.
 
 ```gql
 input Mutation1Input {
@@ -607,7 +604,7 @@ type Mutation {
 
 **equalFields**
 
-A collection of field names that must have equal values.
+Throws if the fields with the provided names have non-equal values.
 
 ```gql
 input Mutation1Input @validObject(equalFields: ["password", "confirmPassword"]) {
@@ -633,7 +630,7 @@ type Mutation {
 
 **nonEqualFields**
 
-A collection of field names that must have distinct values.
+Throws if the fields with the provided names have equal values.
 
 ```gql
 input Mutation1Input @validObject(nonEqualFields: ["securityAnswer1", "securityAnswer2"]) {
@@ -659,7 +656,7 @@ type Mutation {
 
 ## Writing custom directives
 
-Here's an example of a custom validation directive that checks whether a string is a valid timezone name.
+Below is an example of a custom validation directive that checks whether a string is a valid timezone name.
 
 ```ts
 import { makeExecutableSchema } from "@graphql-tools/schema"
