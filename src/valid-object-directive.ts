@@ -3,18 +3,18 @@ import { DocumentNode } from "graphql"
 import { gql } from "graphql-tag"
 import { BaseValidationDirective } from "./base-validation-directive"
 
-export class ObjectValidationDirective extends BaseValidationDirective {
-  constructor() {
-    super("objectValidation", "object")
+export class ValidObjectDirective extends BaseValidationDirective {
+  constructor(name = "validObject") {
+    super(name, "object")
   }
 
   get typeDefs(): DocumentNode {
-    return gql`
-      directive @objectValidation(
+    return gql(`
+      directive @${this.name}(
         equalFields: [String!]
         nonEqualFields: [String!]
       ) on INPUT_OBJECT | ARGUMENT_DEFINITION | ARGUMENT_DEFINITION
-    `
+    `)
   }
 
   validate(directiveConfig: Record<string, any>, value: any) {
@@ -52,8 +52,12 @@ export class ObjectValidationDirective extends BaseValidationDirective {
         )
 
       if (
-        fieldValues.filter((item, index, arr) => arr.indexOf(item) === index)
-          .length !== fieldValues.length
+        fieldValues.some(
+          (fieldValue, index, arr) =>
+            fieldValue !== null &&
+            fieldValue !== undefined &&
+            arr.indexOf(fieldValue) !== index
+        )
       ) {
         throw new Error(
           `Fields ${directiveConfig.nonEqualFields.join(
@@ -62,7 +66,5 @@ export class ObjectValidationDirective extends BaseValidationDirective {
         )
       }
     }
-
-    // TODO: Other validations
   }
 }

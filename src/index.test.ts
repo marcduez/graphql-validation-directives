@@ -3,26 +3,26 @@ import { graphql, GraphQLError, print } from "graphql"
 import gql from "graphql-tag"
 import {
   addValidationToSchema,
-  ListValidationDirective,
-  ObjectValidationDirective,
-  ValidationDirective,
+  ValidListDirective,
+  ValidObjectDirective,
+  ValidStringDirective,
 } from "."
 import { ERROR_CODE, ERROR_MESSAGE } from "./aggregate-validation-error"
 
-const listValidationDirective = new ListValidationDirective()
-const objectValidationDirective = new ObjectValidationDirective()
-const validationDirective = new ValidationDirective()
+const validListDirective = new ValidListDirective()
+const validObjectDirective = new ValidObjectDirective()
+const validStringDirective = new ValidStringDirective()
 
 describe("scalar directive on argument", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
-      validationDirective.applyDirectiveToSchema(
+      validStringDirective.applyDirectiveToSchema(
         makeExecutableSchema({
           typeDefs: [
-            validationDirective.typeDefs,
+            validStringDirective.typeDefs,
             gql`
               type Query {
-                testQuery(arg: String! @validation(startsWith: "a")): Boolean!
+                testQuery(arg: String! @validString(startsWith: "a")): Boolean!
               }
             `,
           ],
@@ -61,13 +61,13 @@ describe("scalar directive on argument", () => {
 describe("scalar directive on input object field", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
-      validationDirective.applyDirectiveToSchema(
+      validStringDirective.applyDirectiveToSchema(
         makeExecutableSchema({
           typeDefs: [
-            validationDirective.typeDefs,
+            validStringDirective.typeDefs,
             gql`
               input TestQueryInput {
-                field: String! @validation(startsWith: "a")
+                field: String! @validString(startsWith: "a")
               }
 
               type Query {
@@ -110,10 +110,10 @@ describe("scalar directive on input object field", () => {
 describe("input object directive on argument", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
-      objectValidationDirective.applyDirectiveToSchema(
+      validObjectDirective.applyDirectiveToSchema(
         makeExecutableSchema({
           typeDefs: [
-            objectValidationDirective.typeDefs,
+            validObjectDirective.typeDefs,
             gql`
               input TestQueryInput {
                 field1: String!
@@ -123,7 +123,7 @@ describe("input object directive on argument", () => {
               type Query {
                 testQuery(
                   arg: TestQueryInput!
-                    @objectValidation(equalFields: ["field1", "field2"])
+                    @validObject(equalFields: ["field1", "field2"])
                 ): Boolean!
               }
             `,
@@ -163,13 +163,13 @@ describe("input object directive on argument", () => {
 describe("input object directive on type", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
-      objectValidationDirective.applyDirectiveToSchema(
+      validObjectDirective.applyDirectiveToSchema(
         makeExecutableSchema({
           typeDefs: [
-            objectValidationDirective.typeDefs,
+            validObjectDirective.typeDefs,
             gql`
               input TestQueryInput
-                @objectValidation(equalFields: ["field1", "field2"]) {
+                @validObject(equalFields: ["field1", "field2"]) {
                 field1: String!
                 field2: String!
               }
@@ -214,13 +214,13 @@ describe("input object directive on type", () => {
 describe("input object directive on argument and type", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
-      objectValidationDirective.applyDirectiveToSchema(
+      validObjectDirective.applyDirectiveToSchema(
         makeExecutableSchema({
           typeDefs: [
-            objectValidationDirective.typeDefs,
+            validObjectDirective.typeDefs,
             gql`
               input TestQueryInput
-                @objectValidation(nonEqualFields: ["field3", "field4"]) {
+                @validObject(nonEqualFields: ["field3", "field4"]) {
                 field1: String!
                 field2: String!
                 field3: String!
@@ -230,7 +230,7 @@ describe("input object directive on argument and type", () => {
               type Query {
                 testQuery(
                   arg: TestQueryInput!
-                    @objectValidation(equalFields: ["field1", "field2"])
+                    @validObject(equalFields: ["field1", "field2"])
                 ): Boolean!
               }
             `,
@@ -274,13 +274,13 @@ describe("input object directive on argument and type", () => {
 describe("input object directive on nested type", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
-      objectValidationDirective.applyDirectiveToSchema(
+      validObjectDirective.applyDirectiveToSchema(
         makeExecutableSchema({
           typeDefs: [
-            objectValidationDirective.typeDefs,
+            validObjectDirective.typeDefs,
             gql`
               input TestQuerySubInput
-                @objectValidation(equalFields: ["field1", "field2"]) {
+                @validObject(equalFields: ["field1", "field2"]) {
                 field1: String!
                 field2: String!
               }
@@ -329,13 +329,13 @@ describe("input object directive on nested type", () => {
 describe("list directive on argument", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
-      listValidationDirective.applyDirectiveToSchema(
+      validListDirective.applyDirectiveToSchema(
         makeExecutableSchema({
           typeDefs: [
-            listValidationDirective.typeDefs,
+            validListDirective.typeDefs,
             gql`
               type Query {
-                testQuery(arg: [String!] @listValidation(minItems: 2)): Boolean!
+                testQuery(arg: [String!] @validList(minItems: 2)): Boolean!
               }
             `,
           ],
@@ -374,13 +374,13 @@ describe("list directive on argument", () => {
 describe("list directive on input object field", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
-      listValidationDirective.applyDirectiveToSchema(
+      validListDirective.applyDirectiveToSchema(
         makeExecutableSchema({
           typeDefs: [
-            listValidationDirective.typeDefs,
+            validListDirective.typeDefs,
             gql`
               input TestQueryInput {
-                field: [String!]! @listValidation(minItems: 2)
+                field: [String!]! @validList(minItems: 2)
               }
 
               type Query {
@@ -423,14 +423,14 @@ describe("list directive on input object field", () => {
 describe("list directive on nested list on argument", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
-      listValidationDirective.applyDirectiveToSchema(
+      validListDirective.applyDirectiveToSchema(
         makeExecutableSchema({
           typeDefs: [
-            listValidationDirective.typeDefs,
+            validListDirective.typeDefs,
             gql`
               type Query {
                 testQuery(
-                  arg: [[String!]] @listValidation(minItems: 2, listDepth: 1)
+                  arg: [[String!]] @validList(minItems: 2, listDepth: 1)
                 ): Boolean!
               }
             `,
@@ -474,13 +474,13 @@ describe("list directive on nested list on argument", () => {
 describe("list directive on nested list on input object field", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
-      listValidationDirective.applyDirectiveToSchema(
+      validListDirective.applyDirectiveToSchema(
         makeExecutableSchema({
           typeDefs: [
-            listValidationDirective.typeDefs,
+            validListDirective.typeDefs,
             gql`
               input TestQueryInput {
-                field: [[String!]]! @listValidation(minItems: 2, listDepth: 1)
+                field: [[String!]]! @validList(minItems: 2, listDepth: 1)
               }
 
               type Query {
@@ -526,18 +526,18 @@ describe("list directive on nested list on input object field", () => {
 
 describe("list directive on argument and scalar directive on list items", () => {
   const schema = addValidationToSchema(
-    listValidationDirective.applyDirectiveToSchema(
-      validationDirective.applyDirectiveToSchema(
+    validListDirective.applyDirectiveToSchema(
+      validStringDirective.applyDirectiveToSchema(
         makeExecutableSchema({
           typeDefs: [
-            listValidationDirective.typeDefs,
-            validationDirective.typeDefs,
+            validListDirective.typeDefs,
+            validStringDirective.typeDefs,
             gql`
               type Query {
                 testQuery(
                   arg: [String!]
-                    @listValidation(minItems: 2)
-                    @validation(startsWith: "a")
+                    @validList(minItems: 2)
+                    @validString(startsWith: "a")
                 ): Boolean!
               }
             `,

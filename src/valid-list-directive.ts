@@ -3,24 +3,25 @@ import { DocumentNode } from "graphql"
 import gql from "graphql-tag"
 import { BaseValidationDirective } from "./base-validation-directive"
 
-export class ListValidationDirective extends BaseValidationDirective {
-  constructor() {
-    super("listValidation", "list")
+export class ValidListDirective extends BaseValidationDirective {
+  constructor(name = "validList") {
+    super(name, "list")
+  }
+
+  getListDepth(directiveConfig: Record<string, any>) {
+    // Returns the depth indicated by the `listDepth` argument of this directive, or 0 by default.
+    return (directiveConfig.listDepth ?? 0) as number
   }
 
   get typeDefs(): DocumentNode {
-    return gql`
-      directive @listValidation(
+    return gql(`
+      directive @${this.name}(
         maxItems: Int
         minItems: Int
         uniqueItems: Boolean
         listDepth: Int
       ) on INPUT_FIELD_DEFINITION | ARGUMENT_DEFINITION
-    `
-  }
-
-  getListDepth(directiveConfig: Record<string, any>) {
-    return (directiveConfig.listDepth ?? 0) as number
+    `)
   }
 
   validate(directiveConfig: Record<string, any>, value: any) {
@@ -44,8 +45,7 @@ export class ListValidationDirective extends BaseValidationDirective {
       uniqueItems === true &&
       valueArray
         .map(item => JSON.stringify(item))
-        .filter((item, index, arr) => arr.indexOf(item) === index).length !==
-        valueArray.length
+        .some((item, index, arr) => arr.indexOf(item) !== index)
     ) {
       throw new Error("Value must contain unique items")
     }

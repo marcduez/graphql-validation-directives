@@ -2,38 +2,31 @@ import { makeExecutableSchema } from "@graphql-tools/schema"
 import { IResolvers } from "@graphql-tools/utils"
 import { DocumentNode, graphql, GraphQLError, print } from "graphql"
 import gql from "graphql-tag"
-import { addValidationToSchema, ObjectValidationDirective } from "."
+import { addValidationToSchema } from "."
 import { ERROR_CODE, ERROR_MESSAGE } from "./aggregate-validation-error"
+import { ValidListDirective } from "./valid-list-directive"
 
-const objectValidationDirective = new ObjectValidationDirective()
+const directive = new ValidListDirective()
 
 const getSchema = <TContext>(
   typeDefs: DocumentNode,
   resolvers: IResolvers<any, TContext> | IResolvers<any, TContext>[]
 ) =>
   addValidationToSchema(
-    objectValidationDirective.applyDirectiveToSchema(
+    directive.applyDirectiveToSchema(
       makeExecutableSchema({
-        typeDefs: [objectValidationDirective.typeDefs, typeDefs],
+        typeDefs: [directive.typeDefs, typeDefs],
         resolvers,
       })
     )
   )
 
-describe("ObjectValidationDirective", () => {
-  describe("equalFields", () => {
+describe("@validList directive", () => {
+  describe("maxItems", () => {
     const schema = getSchema(
       gql`
-        input TestQueryInput {
-          string1: String!
-          string2: String!
-        }
-
         type Query {
-          testQuery(
-            arg: TestQueryInput!
-              @objectValidation(equalFields: ["string1", "string2"])
-          ): Boolean!
+          testQuery(arg: [String!]! @validList(maxItems: 2)): Boolean!
         }
       `,
       {
@@ -48,7 +41,7 @@ describe("ObjectValidationDirective", () => {
         schema,
         source: print(gql`
           query {
-            testQuery(arg: { string1: "a", string2: "b" })
+            testQuery(arg: ["a", "b", "c"])
           }
         `),
       })
@@ -59,7 +52,7 @@ describe("ObjectValidationDirective", () => {
         code: ERROR_CODE,
         validationErrors: [
           {
-            message: "Fields string1 and string2 must be equal",
+            message: "Value must be at most 2 items",
             path: "arg",
           },
         ],
@@ -71,7 +64,7 @@ describe("ObjectValidationDirective", () => {
         schema,
         source: print(gql`
           query {
-            testQuery(arg: { string1: "a", string2: "a" })
+            testQuery(arg: ["a", "b"])
           }
         `),
       })
@@ -81,22 +74,11 @@ describe("ObjectValidationDirective", () => {
     })
   })
 
-  describe("nonEqualFields", () => {
+  describe("minItems", () => {
     const schema = getSchema(
       gql`
-        input TestQueryInput {
-          string1: String!
-          string2: String!
-          string3: String!
-        }
-
         type Query {
-          testQuery(
-            arg: TestQueryInput!
-              @objectValidation(
-                nonEqualFields: ["string1", "string2", "string3"]
-              )
-          ): Boolean!
+          testQuery(arg: [String!]! @validList(minItems: 2)): Boolean!
         }
       `,
       {
@@ -111,7 +93,7 @@ describe("ObjectValidationDirective", () => {
         schema,
         source: print(gql`
           query {
-            testQuery(arg: { string1: "a", string2: "a", string3: "b" })
+            testQuery(arg: ["a"])
           }
         `),
       })
@@ -122,7 +104,7 @@ describe("ObjectValidationDirective", () => {
         code: ERROR_CODE,
         validationErrors: [
           {
-            message: "Fields string1 and string2 and string3 must not be equal",
+            message: "Value must be at least 2 items",
             path: "arg",
           },
         ],
@@ -134,7 +116,59 @@ describe("ObjectValidationDirective", () => {
         schema,
         source: print(gql`
           query {
-            testQuery(arg: { string1: "a", string2: "b", string3: "c" })
+            testQuery(arg: ["a", "b"])
+          }
+        `),
+      })
+
+      expect(result.data).toEqual({ testQuery: true })
+      expect(result.errors).toBeUndefined()
+    })
+  })
+
+  describe("uniqueItems", () => {
+    const schema = getSchema(
+      gql`
+        type Query {
+          testQuery(arg: [String!]! @validList(uniqueItems: true)): Boolean!
+        }
+      `,
+      {
+        Query: {
+          testQuery: () => true,
+        },
+      }
+    )
+
+    it("returns expected errors for invalid args", async () => {
+      const result = await graphql({
+        schema,
+        source: print(gql`
+          query {
+            testQuery(arg: ["a", "a", "b", "c"])
+          }
+        `),
+      })
+
+      expect(result.data).toBeNull()
+      expect(result.errors).toEqual([new GraphQLError(ERROR_MESSAGE, {})])
+      expect((result.errors![0] as GraphQLError).extensions).toEqual({
+        code: ERROR_CODE,
+        validationErrors: [
+          {
+            message: "Value must contain unique items",
+            path: "arg",
+          },
+        ],
+      })
+    })
+
+    it("returns resolver return value for valid args", async () => {
+      const result = await graphql({
+        schema,
+        source: print(gql`
+          query {
+            testQuery(arg: ["a", "b", "c"])
           }
         `),
       })

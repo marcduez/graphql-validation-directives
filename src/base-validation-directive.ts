@@ -13,10 +13,9 @@ import { ValidateFn, ValidationTarget } from "./types"
  */
 export class BaseValidationDirective {
   /**
-   * Ctor.
-   * @param name - The name of this directive. Used in schema updating function, to know which directive to look for.
-   * @param target - The target of this validation. Use "scalar" validation for most validation. Use "list" validation for validation on things like min and max size of lists. Use "object" validation for things like "two fields must match".
-   * @param listDepth - For list validators, the depth of the list. This allows us to write list validators for lists of lists of lists. Ignored for other targets.
+   * Constructor.
+   * @param name - The name of this directive.
+   * @param target - The target of this validation. The "scalar" target is the most common. The "list" target should be used for validators that concern themselves with list shape. The "object" target should be used for validators that compare multiple fields of an object.
    */
   constructor(
     public name: string,
@@ -155,17 +154,35 @@ export class BaseValidationDirective {
     })
   }
 
-  get typeDefs(): DocumentNode {
-    throw new Error("Implemented by sub-class")
-  }
-
   /**
-   * Returns the depth of list validated by this directive, possibly using its attributes as input.
+   * Returns the depth of list validated by this directive.
+   * The depth 0 indicates the topmost list of a field or argument.
+   * The depth 1 indicates the first nested list.
+   * The depth 2 indicates the second nested list, and so on.
+   *
+   * The directive config is provided as an argument, so depth can be based on directive arguments.
+   *
+   * So in the following example:
+   * ```
+   * type MyType {
+   *   myList: [[[String!]!]!]! @validList(maxItems: 2, listDepth: 0) @validList(maxItems: 5, listDepth: 1) @validList(maxItems: 3, listDepth: 2)
+   * }
+   * ```
+   * We would be saying a valid value for myList has up to two items, where each of those items has up to 5 items, where each of those items has up to 3 items.
    * @param directiveConfig - The configuration of this directive
+   * @returns The depth of list validated by this directive.
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getListDepth(directiveConfig: Record<string, any>): number {
     return 0
+  }
+
+  /**
+   * Returns the type definitions of this directive.
+   * These should be merged with the type definitions of the rest of the schema to create a working schema.
+   */
+  get typeDefs(): DocumentNode {
+    throw new Error("Implemented by subclass")
   }
 
   /**
@@ -197,6 +214,6 @@ export class BaseValidationDirective {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     info: GraphQLResolveInfo
   ): void {
-    throw new Error("Implemented by sub-class")
+    throw new Error("Implemented by subclass")
   }
 }

@@ -14,9 +14,11 @@ import { ValidateFn, ValidationTarget } from "./types"
 import ValidationError from "./validation-error"
 
 export { BaseValidationDirective } from "./base-validation-directive"
-export { ListValidationDirective } from "./list-validation-directive"
-export { ObjectValidationDirective } from "./object-validation-directive"
-export { ValidationDirective } from "./validation-directive"
+export { ValidFloatDirective } from "./valid-float-directive"
+export { ValidIntDirective } from "./valid-int-directive"
+export { ValidListDirective } from "./valid-list-directive"
+export { ValidObjectDirective } from "./valid-object-directive"
+export { ValidStringDirective } from "./valid-string-directive"
 
 const unwrapType = (type: GraphQLType) => {
   let result = type
@@ -53,20 +55,20 @@ function markValidateInputObjectRecursive(
   visitedTypes: GraphQLInputObjectType[] = []
 ) {
   visitedTypes.push(inputObjectType)
+
+  const inputObjectTypeHasValidations = !!inputObjectType.extensions.validations
+
   let validate = Object.values(inputObjectType.getFields()).some(field => {
     const fieldType = unwrapType(field.type)
     if (fieldType instanceof GraphQLInputObjectType) {
       return visitedTypes.includes(fieldType)
-        ? false
-        : markValidateInputObjectRecursive(fieldType, [
-            ...visitedTypes,
-            fieldType,
-          ])
+        ? inputObjectTypeHasValidations
+        : markValidateInputObjectRecursive(fieldType, visitedTypes)
     }
     return !!field.extensions.validations
   })
 
-  validate = validate || !!inputObjectType.extensions.validations
+  validate ||= inputObjectTypeHasValidations
 
   if (validate) {
     Object.defineProperty(inputObjectType.extensions, "validate", {
@@ -269,22 +271,22 @@ const wrapValidatedFieldResolvers = (
           )
     )
     .forEach(field => {
-      const { resolve: originalFieldResolver } = field
-      if (originalFieldResolver) {
+      const { resolve: originalResolve } = field
+      if (originalResolve) {
         // eslint-disable-next-line func-names, no-param-reassign
         field.resolve = function (source, args, context, info) {
           validateFieldArguments(field, source, args, context, info)
-          return originalFieldResolver.apply(this, [
-            source,
-            args,
-            context,
-            info,
-          ])
+          return originalResolve.apply(this, [source, args, context, info])
         }
       }
     })
 }
 
+/**
+ * Adds validation behaviour to a schema.
+ * @param schema - The schema to update.
+ * @returns The resulting schema.
+ */
 export const addValidationToSchema = (schema: GraphQLSchema) => {
   const { fieldsWithArguments, inputObjectTypes } =
     getFieldsWithArgumentsAndInputObjectTypes(schema)
