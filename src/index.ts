@@ -50,25 +50,28 @@ const getFieldsWithArgumentsAndInputObjectTypes = (schema: GraphQLSchema) => {
   return { fieldsWithArguments, inputObjectTypes }
 }
 
-function markValidateInputObjectRecursive(
+function addValidateExtensionToInputObjectTypesRecursive(
   inputObjectType: GraphQLInputObjectType,
   visitedTypes: GraphQLInputObjectType[] = []
 ) {
-  visitedTypes.push(inputObjectType)
-
-  const inputObjectTypeHasValidations = !!inputObjectType.extensions.validations
-
-  let validate = Object.values(inputObjectType.getFields()).some(field => {
-    const fieldType = unwrapType(field.type)
-    if (fieldType instanceof GraphQLInputObjectType) {
-      return visitedTypes.includes(fieldType)
-        ? inputObjectTypeHasValidations
-        : markValidateInputObjectRecursive(fieldType, visitedTypes)
+  const newVisitedTypes = [...visitedTypes, inputObjectType]
+  const fieldsHaveValidations = Object.values(inputObjectType.getFields()).some(
+    field => {
+      const fieldType = unwrapType(field.type)
+      if (fieldType instanceof GraphQLInputObjectType) {
+        return newVisitedTypes.includes(fieldType)
+          ? !!fieldType.extensions.validations
+          : addValidateExtensionToInputObjectTypesRecursive(
+              fieldType,
+              newVisitedTypes
+            )
+      }
+      return !!field.extensions.validations
     }
-    return !!field.extensions.validations
-  })
+  )
 
-  validate ||= inputObjectTypeHasValidations
+  const validate =
+    fieldsHaveValidations || !!inputObjectType.extensions.validations
 
   if (validate) {
     Object.defineProperty(inputObjectType.extensions, "validate", {
@@ -292,7 +295,7 @@ export const addValidationToSchema = (schema: GraphQLSchema) => {
     getFieldsWithArgumentsAndInputObjectTypes(schema)
 
   inputObjectTypes.forEach(inputObjectType =>
-    markValidateInputObjectRecursive(inputObjectType)
+    addValidateExtensionToInputObjectTypesRecursive(inputObjectType)
   )
 
   wrapValidatedFieldResolvers(fieldsWithArguments)

@@ -1,6 +1,10 @@
 # graphql-validation-directives
 
-Library for adding input validation to GraphQL services, using schema directives. Under the hood, this library:
+Library for adding input validation to GraphQL services, using schema directives.
+
+This library was heavily inspired by the approach used by [@profusion/apollo-validation-directives](https://github.com/profusion/apollo-validation-directives).
+
+Under the hood, this library:
 
 1. Uses the schema visitor logic to copy directive metadata into the extension methods of input objects, input object fields, and field arguments.
 2. Wraps the resolver functions of all fields with validated arguments, validating all arguments before calling the original resolver. If validation fails, a validation error is returned and the original resolver is never executed.

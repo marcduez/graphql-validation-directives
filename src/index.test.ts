@@ -13,7 +13,7 @@ const validListDirective = new ValidListDirective()
 const validObjectDirective = new ValidObjectDirective()
 const validStringDirective = new ValidStringDirective()
 
-describe("scalar directive on argument", () => {
+describe("string directive on argument", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
       validStringDirective.applyDirectiveToSchema(
@@ -58,7 +58,7 @@ describe("scalar directive on argument", () => {
   })
 })
 
-describe("scalar directive on input object field", () => {
+describe("string directive on input object field", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
       validStringDirective.applyDirectiveToSchema(
@@ -326,6 +326,60 @@ describe("input object directive on nested type", () => {
   })
 })
 
+describe("string directive on self-referencing nested type field", () => {
+  it("returns expected value", async () => {
+    const schema = addValidationToSchema(
+      validStringDirective.applyDirectiveToSchema(
+        makeExecutableSchema({
+          typeDefs: [
+            validStringDirective.typeDefs,
+            gql`
+              input TestQuerySubInput {
+                sub: TestQuerySubInput
+                field1: String! @validString(startsWith: "a")
+              }
+
+              input TestQueryInput {
+                sub: TestQuerySubInput!
+              }
+
+              type Query {
+                testQuery(arg: TestQueryInput!): Boolean!
+              }
+            `,
+          ],
+          resolvers: {
+            Query: {
+              testQuery: () => true,
+            },
+          },
+        })
+      )
+    )
+
+    const result = await graphql({
+      schema,
+      source: print(gql`
+        query {
+          testQuery(arg: { sub: { sub: { field1: "b" }, field1: "a" } })
+        }
+      `),
+    })
+
+    expect(result.data).toBeNull()
+    expect(result.errors).toEqual([new GraphQLError(ERROR_MESSAGE, {})])
+    expect((result.errors![0] as GraphQLError).extensions).toEqual({
+      code: ERROR_CODE,
+      validationErrors: [
+        {
+          message: "Value must start with 'a'",
+          path: "arg.sub.sub.field1",
+        },
+      ],
+    })
+  })
+})
+
 describe("list directive on argument", () => {
   it("returns expected value", async () => {
     const schema = addValidationToSchema(
@@ -524,7 +578,7 @@ describe("list directive on nested list on input object field", () => {
   })
 })
 
-describe("list directive on argument and scalar directive on list items", () => {
+describe("list directive on argument and string directive on list items", () => {
   const schema = addValidationToSchema(
     validListDirective.applyDirectiveToSchema(
       validStringDirective.applyDirectiveToSchema(
