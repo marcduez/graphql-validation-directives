@@ -1,10 +1,19 @@
 {
   "name": "@marcduez/graphql-validation-directives",
-  "version": "1.0.0",
-  "main": "index.js",
+  "version": "0.1.0",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "repository": "git@github.com:marcduez/graphql-validation-directives.git",
   "author": "Marc Duez <marcduez@gmail.com>",
   "license": "MIT",
+  "keywords": [
+    "graphql",
+    "validate",
+    "validation",
+    "validator",
+    "directive",
+    "constraint"
+  ],
   "devDependencies": {
     "@graphql-tools/schema": "^8.3.2",
     "@types/jest": "^27.0.3",
@@ -26,7 +35,7 @@
   "scripts": {
     "build": "tsc --build tsconfig.notests.json",
     "lint": "tsc --noEmit && prettier -c . && eslint .",
-    "test": "jest --runInBand"
+    "test": "jest"
   },
   "dependencies": {
     "@graphql-tools/utils": "^8.6.2",

@@ -4,14 +4,10 @@ on:
   push:
     branches:
       - main
-  release:
-    types:
-      - published
 
 jobs:
-  test-and-publish:
+  default:
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
 
     steps:
       - uses: actions/checkout@v2
@@ -20,8 +16,6 @@ jobs:
         with:
           node-version: "14.x"
           cache: "yarn"
-          registry-url: "https://npm.pkg.github.com"
-          scope: "@marcduez"
 
       - run: yarn install --frozen-lockfile
 
@@ -31,8 +25,17 @@ jobs:
 
       - run: yarn build
 
-      - run: cp {package.json,README.md} dist
+      - uses: JS-DevTools/npm-publish@v1
+        id: npm_publish
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          access: public
 
-      - run: yarn publish dist --new-version "${GITHUB_REF#refs/tags/}" --no-git-tag-version --verbose
+      - uses: actions/create-release@v1
+        if: steps.npm_publish.outputs.type != 'none'
+        id: create_release
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.npm_publish.outputs.version }}
+          release_name: ${{ steps.npm_publish.outputs.version }}
