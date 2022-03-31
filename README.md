@@ -124,7 +124,7 @@ const executableSchema = addValidationToSchema(
 
 **format**
 
-Throws if a string does not match the provided foramt. Currently allowed values are `EMAIL` and `UUID`.
+Throws if a string does not match the provided format. Currently allowed values are `EMAIL` and `UUID`.
 
 ```gql
 input Mutation1Input {
