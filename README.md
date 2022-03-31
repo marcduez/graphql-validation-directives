@@ -1,5 +1,7 @@
 # graphql-validation-directives
 
+<span class="badge-npmversion"><a href="https://npmjs.org/package/@marcduez/graphql-validation-directives" title="View this project on NPM"><img src="https://img.shields.io/npm/v/@marcduez/graphql-validation-directives.svg" alt="NPM version" /></a></span>
+
 Library for adding input validation to GraphQL services, using schema directives.
 
 This library was heavily inspired by the approach used by [@profusion/apollo-validation-directives](https://github.com/profusion/apollo-validation-directives).
@@ -19,6 +21,7 @@ import {
   ValidObjectDirective,
   ValidStringDirective,
 } from "@marcduez/graphql-validation-directives"
+import gql from "graphql-tag"
 
 const validListDirective = new ValidListDirective()
 const validObjectDirective = new ValidObjectDirective()
@@ -85,6 +88,7 @@ import {
   addValidationToSchema,
   ValidStringDirective,
 } from "@marcduez/graphql-validation-directives"
+import gql from "graphql-tag"
 
 const validStringDirective = new ValidStringDirective("customDirectiveName")
 
@@ -668,7 +672,7 @@ import {
   addValidationToSchema,
   BaseValidationDirective,
 } from "@marcduez/graphql-validation-directives"
-import { gql } from "graphql-tag"
+import gql from "graphql-tag"
 import { getTimezone } from "countries-and-timezones"
 
 class ValidTimezoneDirective extends BaseValidationDirective {
