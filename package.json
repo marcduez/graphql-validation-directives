@@ -1,6 +1,6 @@
 {
   "name": "@marcduez/graphql-validation-directives",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "repository": "git@github.com:marcduez/graphql-validation-directives.git",
@@ -15,30 +15,30 @@
     "constraint"
   ],
   "devDependencies": {
-    "@graphql-tools/schema": "^8.3.10",
-    "@types/jest": "^27.5.0",
-    "@typescript-eslint/eslint-plugin": "^5.22.0",
-    "@typescript-eslint/parser": "^5.22.0",
-    "eslint": "^8.14.0",
+    "@graphql-tools/schema": "^9.0.10",
+    "@types/jest": "^29.2.3",
+    "@typescript-eslint/eslint-plugin": "^5.43.0",
+    "@typescript-eslint/parser": "^5.43.0",
+    "eslint": "^8.28.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-airbnb-typescript": "^17.0.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-import": "^2.26.0",
-    "eslint-plugin-jest": "^26.1.5",
-    "jest": "^28.0.3",
-    "prettier": "^2.6.2",
-    "ts-jest": "^28.0.1",
-    "ts-node-dev": "^1.1.8",
-    "typescript": "^4.6.4"
+    "eslint-plugin-jest": "^27.1.5",
+    "jest": "^29.3.1",
+    "prettier": "^2.7.1",
+    "ts-jest": "^29.0.3",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.3"
   },
   "scripts": {
-    "build": "tsc --build tsconfig.notests.json",
+    "build": "tsc --build tsconfig.build.json",
     "lint": "tsc --noEmit && prettier -c . && eslint .",
     "test": "jest"
   },
   "dependencies": {
-    "@graphql-tools/utils": "^8.6.9",
-    "graphql": "^16.4.0",
+    "@graphql-tools/utils": "^9.1.1",
+    "graphql": "^16.6.0",
     "graphql-tag": "^2.12.6"
   }
 }
