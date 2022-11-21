@@ -208,7 +208,7 @@ Throws if the string does not end with the provided value.
 
 ```gql
 input Mutation1Input {
-  field: String! @validString(startsWith: "-cad")
+  field: String! @validString(endsWith: "-cad")
 }
 
 type Mutation {
@@ -218,7 +218,7 @@ type Mutation {
 OR
 
 type Mutation {
-  someMutation(arg: String! @validString(startsWith: "-cad")): Boolean!
+  someMutation(arg: String! @validString(endsWith: "-cad")): Boolean!
 }
 ```
 
@@ -228,7 +228,7 @@ Throws if the string does not include the provided value.
 
 ```gql
 input Mutation1Input {
-  field: String! @validString(contains: "-rrsp-")
+  field: String! @validString(includes: "-rrsp-")
 }
 
 type Mutation {
@@ -238,7 +238,7 @@ type Mutation {
 OR
 
 type Mutation {
-  someMutation(arg: String! @validString(contains: "-rrsp-")): Boolean!
+  someMutation(arg: String! @validString(includes: "-rrsp-")): Boolean!
 }
 ```
 

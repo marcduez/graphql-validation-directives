@@ -1,6 +1,6 @@
 {
   "name": "@marcduez/graphql-validation-directives",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "repository": "git@github.com:marcduez/graphql-validation-directives.git",
@@ -32,7 +32,7 @@
     "typescript": "^4.6.4"
   },
   "scripts": {
-    "build": "tsc --build tsconfig.notests.json",
+    "build": "tsc --build tsconfig.build.json",
     "lint": "tsc --noEmit && prettier -c . && eslint .",
     "test": "jest"
   },
